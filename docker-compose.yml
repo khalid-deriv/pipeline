@@ -1,0 +1,153 @@
+# Endpoint: bi-airflow-dev
+# Stack: airflow-development
+version: '3.8'
+services:
+  postgres:
+    image: postgres:13
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      - PGDATA=/var/lib/postgresql/data
+      - POSTGRES_DB=airflow
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PASSWORD=Abcd1234
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=airflow
+    volumes:
+      - ~/projects/pipeline/airflow/pgdata:/var/lib/postgresql/data
+    networks:
+      - airflow_network
+      # - datadog-network
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    command: redis-server --requirepass Abcd1234
+    networks:
+      - airflow_network
+      # - datadog-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 30s
+      retries: 50
+
+  webserver:
+    image: gcr.io/business-intelligence-240201/airflow-bi:V2.8.0-python3.11
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    command: webserver
+    ports:
+      - "8080:8080"
+    environment:
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_PASSWORD=Abcd1234
+      - AIRFLOW_UID=501
+      - POSTGRES_PASSWORD=Abcd1234
+
+    volumes:
+      - ~/projects/pipeline/airflow/dags:/opt/airflow/dags
+      - ~/projects/pipeline/airflow/logs:/opt/airflow/logs
+      - ~/projects/pipeline/airflow/plugins:/opt/airflow/plugins
+      - ~/projects/pipeline/airflow/conf/airflow.cfg:/opt/airflow/airflow.cfg
+      # - ~/projects/pipeline/airflow/ssh:/.ssh
+    networks:
+      - airflow_network
+      # - datadog-network
+      # - sftp-dev
+    # healthcheck:
+    #   test: ["CMD", "curl", "--fail", "http://localhost:8080/login/?next=http://localhost:8080/home"]
+    #   interval: 10s
+    #   timeout: 10s
+    #   retries: 5
+
+  scheduler:
+    image: gcr.io/business-intelligence-240201/airflow-bi:V2.8.0-python3.11
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    command: scheduler
+    environment:
+      - _AIRFLOW_DB_UPGRADE=true
+    volumes:
+      - ~/projects/pipeline/airflow/dags:/opt/airflow/dags
+      - ~/projects/pipeline/airflow/logs:/opt/airflow/logs
+      - ~/projects/pipeline/airflow/plugins:/opt/airflow/plugins
+      - ~/projects/pipeline/airflow/conf/airflow.cfg:/opt/airflow/airflow.cfg
+    networks:
+      - airflow_network
+      # - datadog-network
+      # - sftp-dev
+
+  worker:
+    image: gcr.io/business-intelligence-240201/airflow-bi:V2.8.0-python3.11
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    command: celery worker
+    environment:
+      - _AIRFLOW_DB_UPGRADE=true
+      - POSTGRES_PASSWORD=Abcd1234
+    volumes:
+      - ~/projects/pipeline/airflow/dags:/opt/airflow/dags
+      - ~/projects/pipeline/airflow/logs:/opt/airflow/logs
+      - ~/projects/pipeline/airflow/plugins:/opt/airflow/plugins
+      - ~/projects/pipeline/airflow/conf/airflow.cfg:/opt/airflow/airflow.cfg
+      # - ~/projects/pipeline/airflow/ssh:/.ssh
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # - /etc/rmg/metabasedb_ssl:/opt/airflow/metabasedb_ssl
+    networks:
+      - airflow_network
+      # - datadog-network
+      # - sftp-dev
+      # - mt5-stunnel #added 11 April by Mario
+
+  flower:
+    image: gcr.io/business-intelligence-240201/airflow-bi:V2.8.0-python3.11
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    entrypoint: ./entrypoint.sh airflow flower --basic_auth ${AIRFLOW__FLOWER__AUTH}
+    command: celery flower
+    environment:
+      - _AIRFLOW_DB_UPGRADE=true
+    volumes:
+      - ~/projects/pipeline/airflow/dags:/opt/airflow/dags
+      - ~/projects/pipeline/airflow/logs:/opt/airflow/logs
+      - ~/projects/pipeline/airflow/plugins:/opt/airflow/plugins
+      - ~/projects/pipeline/airflow/conf/airflow.cfg:/opt/airflow/airflow.cfg
+    networks:
+      - airflow_network
+      # - datadog-network
+    ports:
+      - 5555:5555
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+
+networks:
+  airflow_network:
+    external: false
+
+
+  # mt5-stunnel:
+  #     external: true
+  #     name: stunnel_mt5-stunnel
+  # sftp-dev:
+  #     external: true
+  #     name: sftp-dev_sftp-dev
+  # datadog-network:
+  #   external: true
+  #   name: datadog_datadog-network

@@ -1,0 +1,5 @@
+docker
+flask_bcrypt
+GitPython
+psycopg2-binary
+redis
