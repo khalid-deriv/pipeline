@@ -2,6 +2,29 @@
 # Stack: airflow-development
 version: '3.8'
 services:
+  datawarehouse:
+    image: postgres:16
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      - PGDATA=/var/lib/postgresql/data
+      - POSTGRES_DB=datawarehouse
+      - POSTGRES_HOST=datawarehouse
+      - POSTGRES_PASSWORD=<PASSWORD>
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+    volumes:
+      - ~/projects/pipeline/airflow/dwdata:/var/lib/postgresql/data
+    networks:
+      - airflow_network
+      # - datadog-network
+    ports:
+      - 5433:5432
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
   postgres:
     image: postgres:16
     deploy:
