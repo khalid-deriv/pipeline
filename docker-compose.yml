@@ -3,7 +3,7 @@
 version: '3.8'
 services:
   postgres:
-    image: postgres:13
+    image: postgres:16
     deploy:
       placement:
         constraints: [node.role == manager]
@@ -11,7 +11,7 @@ services:
       - PGDATA=/var/lib/postgresql/data
       - POSTGRES_DB=airflow
       - POSTGRES_HOST=postgres
-      - POSTGRES_PASSWORD=Abcd1234
+      - POSTGRES_PASSWORD=<PASSWORD>
       - POSTGRES_PORT=5432
       - POSTGRES_USER=airflow
     volumes:
@@ -28,7 +28,7 @@ services:
 
   redis:
     image: redis:latest
-    command: redis-server --requirepass Abcd1234
+    command: redis-server --requirepass <PASSWORD>
     networks:
       - airflow_network
       # - datadog-network
@@ -39,7 +39,7 @@ services:
       retries: 50
 
   webserver:
-    image: gcr.io/business-intelligence-240201/airflow-bi:V2.8.0-python3.11
+    image: custom-airflow:V1
     deploy:
       placement:
         constraints: [node.role == manager]
@@ -49,9 +49,9 @@ services:
     environment:
       - _AIRFLOW_DB_UPGRADE=true
       - _AIRFLOW_WWW_USER_CREATE=true
-      - _AIRFLOW_WWW_USER_PASSWORD=Abcd1234
+      - _AIRFLOW_WWW_USER_PASSWORD=<PASSWORD>
       - AIRFLOW_UID=501
-      - POSTGRES_PASSWORD=Abcd1234
+      - POSTGRES_PASSWORD=<PASSWORD>
 
     volumes:
       - ~/projects/pipeline/airflow/dags:/opt/airflow/dags
@@ -70,7 +70,7 @@ services:
     #   retries: 5
 
   scheduler:
-    image: gcr.io/business-intelligence-240201/airflow-bi:V2.8.0-python3.11
+    image: custom-airflow:V1
     deploy:
       placement:
         constraints: [node.role == manager]
@@ -88,14 +88,14 @@ services:
       # - sftp-dev
 
   worker:
-    image: gcr.io/business-intelligence-240201/airflow-bi:V2.8.0-python3.11
+    image: custom-airflow:V1
     deploy:
       placement:
         constraints: [node.role == manager]
     command: celery worker
     environment:
       - _AIRFLOW_DB_UPGRADE=true
-      - POSTGRES_PASSWORD=Abcd1234
+      - POSTGRES_PASSWORD=<PASSWORD>
     volumes:
       - ~/projects/pipeline/airflow/dags:/opt/airflow/dags
       - ~/projects/pipeline/airflow/logs:/opt/airflow/logs
@@ -112,7 +112,7 @@ services:
       # - mt5-stunnel #added 11 April by Mario
 
   flower:
-    image: gcr.io/business-intelligence-240201/airflow-bi:V2.8.0-python3.11
+    image: custom-airflow:V1
     deploy:
       placement:
         constraints: [node.role == manager]
