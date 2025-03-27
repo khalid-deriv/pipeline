@@ -81,16 +81,8 @@ services:
       - ~/projects/pipeline/airflow/logs:/opt/airflow/logs
       - ~/projects/pipeline/airflow/plugins:/opt/airflow/plugins
       - ~/projects/pipeline/airflow/conf/airflow.cfg:/opt/airflow/airflow.cfg
-      # - ~/projects/pipeline/airflow/ssh:/.ssh
     networks:
       - airflow_network
-      # - datadog-network
-      # - sftp-dev
-    # healthcheck:
-    #   test: ["CMD", "curl", "--fail", "http://localhost:8080/login/?next=http://localhost:8080/home"]
-    #   interval: 10s
-    #   timeout: 10s
-    #   retries: 5
 
   scheduler:
     image: custom-airflow:V1
@@ -107,8 +99,6 @@ services:
       - ~/projects/pipeline/airflow/conf/airflow.cfg:/opt/airflow/airflow.cfg
     networks:
       - airflow_network
-      # - datadog-network
-      # - sftp-dev
 
   worker:
     image: custom-airflow:V1
@@ -124,15 +114,9 @@ services:
       - ~/projects/pipeline/airflow/logs:/opt/airflow/logs
       - ~/projects/pipeline/airflow/plugins:/opt/airflow/plugins
       - ~/projects/pipeline/airflow/conf/airflow.cfg:/opt/airflow/airflow.cfg
-      # - ~/projects/pipeline/airflow/ssh:/.ssh
       - /var/run/docker.sock:/var/run/docker.sock
-
-      # - /etc/rmg/metabasedb_ssl:/opt/airflow/metabasedb_ssl
     networks:
       - airflow_network
-      # - datadog-network
-      # - sftp-dev
-      # - mt5-stunnel #added 11 April by Mario
 
   flower:
     image: custom-airflow:V1
@@ -150,11 +134,35 @@ services:
       - ~/projects/pipeline/airflow/conf/airflow.cfg:/opt/airflow/airflow.cfg
     networks:
       - airflow_network
-      # - datadog-network
     ports:
       - 5555:5555
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  
+  metabase:
+    image: metabase/metabase:latest
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      - MB_DB_TYPE=postgres
+      - MB_DB_DBNAME=metabase
+      - MB_DB_PORT=5444
+      - MB_DB_USER=metabase
+      - MB_DB_PASS=Abcd1234
+      - MB_DB_HOST=localhost
+      - MB_EMOJI_IN_LOGS=true
+    volumes:
+      - ~/projects/pipeline/metabase/metabase-data:/metabase-data
+    networks:
+      - airflow_network
+    ports:
+      - 3000:3000
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -165,12 +173,3 @@ networks:
     external: false
 
 
-  # mt5-stunnel:
-  #     external: true
-  #     name: stunnel_mt5-stunnel
-  # sftp-dev:
-  #     external: true
-  #     name: sftp-dev_sftp-dev
-  # datadog-network:
-  #   external: true
-  #   name: datadog_datadog-network
