@@ -1,5 +1,3 @@
-# Endpoint: bi-airflow-dev
-# Stack: airflow-development
 version: '3.8'
 services:
   datawarehouse:
